@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지수와 로그 마스터</title>
+    <!-- Tailwind CSS v3 CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- React, ReactDOM, Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { motion, AnimatePresence } = FramerMotion;
+
+        // --- Constants & Data ---
+        const CONCEPTS = [
+            {
+                id: 'exponents',
+                title: '지수의 확장',
+                content: [
+                    '1. 거듭제곱: 실수 a와 양의 정수 n에 대하여 a를 n번 곱한 것을 a의 n제곱이라 하고 ',
+                    { id: 'exp-1', answer: 'aⁿ', hint: 'a의 n제곱을 기호로 써보세요.', options: ['aⁿ', 'nᵃ', 'a×n', 'a+n'] },
+                    ' 이라 한다.\n',
+                    '2. 지수법칙: a > 0, b > 0이고 m, n이 실수일 때\n',
+                    '   - aᵐ × aⁿ = ', { id: 'exp-2', answer: 'aᵐ⁺ⁿ', hint: '지수끼리 더합니다.', options: ['aᵐ⁺ⁿ', 'aᵐ⁻ⁿ', 'aᵐⁿ', 'aᵐ/ⁿ'] }, '\n',
+                    '   - (aᵐ)ⁿ = ', { id: 'exp-3', answer: 'aᵐⁿ', hint: '지수끼리 곱합니다.', options: ['aᵐⁿ', 'aᵐ⁺ⁿ', 'aᵐ/ⁿ', 'aⁿ/ᵐ'] }, '\n',
+                    '   - a⁰ = ', { id: 'exp-4', answer: '1', hint: '모든 수의 0제곱은?', options: ['1', '0', 'a', '-1'] }, ' (단, a ≠ 0)\n',
+                    '   - a⁻ⁿ = ', { id: 'exp-5', answer: '1/aⁿ', hint: '음수 지수는 역수입니다.', options: ['1/aⁿ', '-aⁿ', 'aⁿ', 'n/a'] }
+                ]
+            },
+            {
+                id: 'logarithms',
+                title: '로그의 정의와 성질',
+                content: [
+                    '1. 로그의 정의: a > 0, a ≠ 1일 때, aˣ = N을 만족하는 실수 x를 ',
+                    { id: 'log-1', answer: 'logₐN', hint: '로그 기호를 사용하여 나타내보세요.', options: ['logₐN', 'logₙa', 'ln N', 'log N'] },
+                    ' 이라 한다.\n',
+                    '   - 여기서 a를 ', { id: 'log-2', answer: '밑', hint: '아래에 있는 수' }, ', N을 ', { id: 'log-3', answer: '진수', hint: '로그의 대상이 되는 수' }, '라고 한다.\n',
+                    '2. 로그의 성질: a > 0, a ≠ 1, M > 0, N > 0일 때\n',
+                    '   - logₐ1 = ', { id: 'log-4', answer: '0', hint: '진수가 1이면 로그값은?', options: ['0', '1', 'a', 'e'] }, '\n',
+                    '   - logₐa = ', { id: 'log-5', answer: '1', hint: '밑과 진수가 같으면?', options: ['1', '0', 'a', '10'] }, '\n',
+                    '   - logₐ(MN) = ', { id: 'log-6', answer: 'logₐM + logₐN', hint: '곱셈은 덧셈으로 분리됩니다.', options: ['logₐM + logₐN', 'logₐM × logₐN', 'logₐ(M+N)', 'logₐM / logₐN'] }
+                ]
+            },
+            {
+                id: 'exp-functions',
+                title: '지수함수',
+                content: [
+                    '1. 지수함수: a > 0, a ≠ 1일 때, 함수 y = ',
+                    { id: 'exp-f-1', answer: 'aˣ', hint: '지수함수의 기본 형태', options: ['aˣ', 'xᵃ', 'logₐx', 'ax'] },
+                    ' 를 a를 밑으로 하는 지수함수라고 한다.\n',
+                    '2. 지수함수의 성질:\n',
+                    '   - 정의역은 실수 전체의 집합이고, 치역은 ', { id: 'exp-f-2', answer: '양의 실수', hint: 'y값의 범위는?' }, ' 전체의 집합이다.\n',
+                    '   - a > 1일 때, x가 증가하면 y도 ', { id: 'exp-f-3', answer: '증가', hint: '그래프의 방향은?' }, '한다.\n',
+                    '   - 0 < a < 1일 때, x가 증가하면 y는 ', { id: 'exp-f-4', answer: '감소', hint: '그래프의 방향은?' }, '한다.\n',
+                    '   - 그래프는 항상 점 (0, ', { id: 'exp-f-5', answer: '1', hint: 'y절편은?', options: ['1', '0', 'a', '-1'] }, ')을 지난다.'
+                ]
+            },
+            {
+                id: 'log-functions',
+                title: '로그함수',
+                content: [
+                    '1. 로그함수: a > 0, a ≠ 1일 때, 함수 y = ',
+                    { id: 'log-f-1', answer: 'logₐx', hint: '로그함수의 기본 형태', options: ['logₐx', 'aˣ', 'ln x', 'x/a'] },
+                    ' 를 a를 밑으로 하는 로그함수라고 한다.\n',
+                    '2. 로그함수의 성질:\n',
+                    '   - 정의역은 ', { id: 'log-f-2', answer: '양의 실수', hint: '진수 조건과 같습니다.' }, ' 전체의 집합이고, 치역은 실수 전체의 집합이다.\n',
+                    '   - a > 1일 때, x가 증가하면 y도 ', { id: 'log-f-3', answer: '증가', hint: '그래프의 방향은?' }, '한다.\n',
+                    '   - 0 < a < 1일 때, x가 증가하면 y는 ', { id: 'log-f-4', answer: '감소', hint: '그래프의 방향은?' }, '한다.\n',
+                    '   - 그래프는 항상 점 (', { id: 'log-f-5', answer: '1', hint: 'x절편은?', options: ['1', '0', 'a', '10'] }, ', 0)을 지난다.'
+                ]
+            }
+        ];
+
+        // --- Components ---
+
+        const Icon = ({ name, className }) => {
+            const [svg, setSvg] = useState('');
+            useEffect(() => {
+                if (window.lucide) {
+                    const icon = window.lucide.icons[name];
+                    if (icon) {
+                        setSvg(icon.toSvg({ class: className }));
+                    }
+                }
+            }, [name, className]);
+            return <span dangerouslySetInnerHTML={{ __html: svg }} />;
+        };
+
+        const Graph = ({ type, a }) => {
+            const isExp = type === 'exp';
+            const isGreater = a === 'greater';
+            let path = isExp 
+                ? (isGreater ? "M 10 90 Q 50 85 90 10" : "M 10 10 Q 50 85 90 90")
+                : (isGreater ? "M 10 90 Q 15 50 90 10" : "M 10 10 Q 15 50 90 90");
+
+            return (
+                <div className="flex flex-col items-center gap-2 p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                        {isExp ? 'y = aˣ' : 'y = logₐx'} ({isGreater ? 'a > 1' : '0 < a < 1'})
+                    </span>
+                    <svg width="100" height="100" viewBox="0 0 100 100" className="overflow-visible">
+                        <line x1="0" y1="50" x2="100" y2="50" stroke="#d1d5db" strokeWidth="1" />
+                        <line x1="50" y1="0" x2="50" y2="100" stroke="#d1d5db" strokeWidth="1" />
+                        <motion.path
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            transition={{ duration: 1.5, ease: "easeInOut" }}
+                            d={path}
+                            fill="none"
+                            stroke={isGreater ? "#10b981" : "#f59e0b"}
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                        />
+                        <circle cx={isExp ? 50 : 60} cy={isExp ? 40 : 50} r="3" fill="#1f2937" />
+                    </svg>
+                </div>
+            );
+        };
+
+        function App() {
+            const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+            const [userAnswers, setUserAnswers] = useState({});
+            const [showHints, setShowHints] = useState({});
+            const [completedSections, setCompletedSections] = useState(new Set());
+            const [isFinished, setIsFinished] = useState(false);
+            const [activeBlankId, setActiveBlankId] = useState(null);
+
+            const currentSection = CONCEPTS[currentSectionIndex];
+            const sectionBlanks = useMemo(() => 
+                currentSection.content.filter(item => typeof item !== 'string'), 
+                [currentSection]
+            );
+
+            const isSectionComplete = useMemo(() => 
+                sectionBlanks.every(blank => userAnswers[blank.id]?.trim() === blank.answer),
+                [sectionBlanks, userAnswers]
+            );
+
+            useEffect(() => {
+                if (isSectionComplete && !completedSections.has(currentSection.id)) {
+                    setCompletedSections(prev => new Set([...prev, currentSection.id]));
+                }
+            }, [isSectionComplete, currentSection.id]);
+
+            const handleInputChange = (id, value) => {
+                setUserAnswers(prev => ({ ...prev, [id]: value }));
+            };
+
+            const nextSection = () => {
+                if (currentSectionIndex < CONCEPTS.length - 1) {
+                    setCurrentSectionIndex(prev => prev + 1);
+                    setActiveBlankId(null);
+                } else {
+                    setIsFinished(true);
+                    confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+                }
+            };
+
+            const prevSection = () => {
+                if (currentSectionIndex > 0) {
+                    setCurrentSectionIndex(prev => prev - 1);
+                    setActiveBlankId(null);
+                }
+            };
+
+            const resetApp = () => {
+                setCurrentSectionIndex(0);
+                setUserAnswers({});
+                setShowHints({});
+                setCompletedSections(new Set());
+                setIsFinished(false);
+                setActiveBlankId(null);
+            };
+
+            const progress = (completedSections.size / CONCEPTS.length) * 100;
+
+            if (isFinished) {
+                return (
+                    <div className="min-h-screen bg-stone-50 py-12 px-6">
+                        <div className="max-w-4xl mx-auto space-y-12">
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
+                                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                                    <Icon name="Trophy" className="w-10 h-10 text-emerald-600" />
+                                </div>
+                                <h1 className="text-4xl font-bold text-stone-900">학습 완료! 전체 요약</h1>
+                                <p className="text-stone-600 max-w-lg mx-auto">모든 개념을 완벽하게 정리했습니다. 아래 요약본을 확인하고 복습해보세요.</p>
+                                <button onClick={resetApp} className="inline-flex items-center gap-2 bg-stone-900 text-white px-8 py-3 rounded-2xl font-semibold hover:bg-stone-800 transition-colors">
+                                    <Icon name="RotateCcw" className="w-5 h-5" /> 다시 학습하기
+                                </button>
+                            </motion.div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {CONCEPTS.map((section) => (
+                                    <div key={section.id} className="bg-white rounded-3xl border border-stone-200 p-8 shadow-sm space-y-6">
+                                        <h3 className="text-xl font-bold text-stone-900 border-b border-stone-100 pb-4">{section.title}</h3>
+                                        <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">
+                                            {section.content.map((item, idx) => (
+                                                typeof item === 'string' ? item : <span key={idx} className="font-bold text-emerald-600 bg-emerald-50 px-1 rounded mx-0.5">{item.answer}</span>
+                                            ))}
+                                        </div>
+                                        {(section.id === 'exp-functions' || section.id === 'log-functions') && (
+                                            <div className="flex justify-center gap-4 pt-4 border-t border-stone-50">
+                                                <Graph type={section.id === 'exp-functions' ? 'exp' : 'log'} a="greater" />
+                                                <Graph type={section.id === 'exp-functions' ? 'exp' : 'log'} a="less" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-stone-50 text-stone-900 selection:bg-emerald-100">
+                    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200 px-6 py-4">
+                        <div className="max-w-3xl mx-auto flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center">
+                                    <Icon name="GraduationCap" className="text-white w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold tracking-tight">지수와 로그 마스터</h1>
+                                    <p className="text-xs text-stone-500 font-medium uppercase tracking-wider">Concept Summary</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-32 h-2 bg-stone-200 rounded-full overflow-hidden">
+                                    <motion.div className="h-full bg-emerald-500" initial={{ width: 0 }} animate={{ width: `${progress}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-3xl mx-auto px-6 py-12">
+                        <AnimatePresence mode="wait">
+                            <motion.div key={currentSection.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+                                <div className="space-y-2">
+                                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Section {currentSectionIndex + 1}</span>
+                                    <h2 className="text-4xl font-bold tracking-tight text-stone-900">{currentSection.title}</h2>
+                                </div>
+
+                                <div className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-10 shadow-sm leading-relaxed text-lg text-stone-700 relative">
+                                    <div className="whitespace-pre-wrap">
+                                        {currentSection.content.map((item, idx) => {
+                                            if (typeof item === 'string') return <span key={idx}>{item}</span>;
+                                            const isCorrect = userAnswers[item.id]?.trim() === item.answer;
+                                            const hasValue = userAnswers[item.id]?.length > 0;
+                                            const isActive = activeBlankId === item.id;
+
+                                            return (
+                                                <span key={item.id} className="inline-block mx-1 relative group">
+                                                    {item.options ? (
+                                                        <button
+                                                            onClick={() => !isCorrect && setActiveBlankId(isActive ? null : item.id)}
+                                                            className={`px-4 py-1 rounded-lg border-2 transition-all duration-200 font-mono text-center min-w-[100px] flex items-center justify-center gap-2 ${
+                                                                isCorrect ? "bg-emerald-50 border-emerald-500 text-emerald-700 cursor-default" :
+                                                                isActive ? "bg-stone-900 border-stone-900 text-white ring-4 ring-stone-100" :
+                                                                hasValue ? "bg-rose-50 border-rose-300 text-rose-700" : "bg-stone-50 border-stone-200 hover:border-stone-400"
+                                                            }`}
+                                                        >
+                                                            <span className={!hasValue ? "text-stone-400 text-sm font-sans" : ""}>{userAnswers[item.id] || "선택하기"}</span>
+                                                        </button>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value={userAnswers[item.id] || ''}
+                                                            onChange={(e) => handleInputChange(id, e.target.value)}
+                                                            placeholder="???"
+                                                            className={`px-3 py-1 rounded-lg border-2 transition-all duration-200 outline-none font-mono text-center min-w-[80px] ${
+                                                                isCorrect ? "bg-emerald-50 border-emerald-500 text-emerald-700" :
+                                                                hasValue ? "bg-rose-50 border-rose-300 text-rose-700" : "bg-stone-50 border-stone-200 focus:border-stone-900"
+                                                            }`}
+                                                            style={{ width: `${Math.max(item.answer.length + 2, 4)}ch` }}
+                                                        />
+                                                    )}
+                                                    {isActive && item.options && (
+                                                        <div className="absolute z-40 top-full mt-3 left-1/2 -translate-x-1/2 bg-white border border-stone-200 rounded-2xl shadow-2xl p-2 grid grid-cols-2 gap-2 min-w-[240px]">
+                                                            {item.options.map(opt => (
+                                                                <button key={opt} onClick={() => { handleInputChange(item.id, opt); setActiveBlankId(null); }} className={`px-4 py-3 rounded-xl font-mono text-sm transition-all text-center ${userAnswers[item.id] === opt ? "bg-stone-900 text-white" : "bg-stone-50 hover:bg-stone-100"}`}>
+                                                                    {opt}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                    {(currentSection.id === 'exp-functions' || currentSection.id === 'log-functions') && (
+                                        <div className="mt-10 flex flex-wrap justify-center gap-6 pt-8 border-t border-stone-100">
+                                            <Graph type={currentSection.id === 'exp-functions' ? 'exp' : 'log'} a="greater" />
+                                            <Graph type={currentSection.id === 'exp-functions' ? 'exp' : 'log'} a="less" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-8">
+                                    <button onClick={prevSection} disabled={currentSectionIndex === 0} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold ${currentSectionIndex === 0 ? "text-stone-300" : "text-stone-600 hover:bg-stone-200"}`}>
+                                        <Icon name="ChevronLeft" className="w-5 h-5" /> 이전
+                                    </button>
+                                    <button onClick={nextSection} disabled={!isSectionComplete} className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-bold transition-all ${isSectionComplete ? "bg-stone-900 text-white hover:bg-stone-800" : "bg-stone-200 text-stone-400"}`}>
+                                        {currentSectionIndex === CONCEPTS.length - 1 ? "완료하기" : "다음 단계"} <Icon name="ChevronRight" className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
